@@ -5,11 +5,16 @@
 To run the test, run this in the root of repo:
 python -m unittest discover
 """
-
+# from __future__ import unicode_literals
 import unittest
 from decimal import Decimal
+from sys import version
+py3 = version[0] == '3'
 
 from deepdiff import DeepDiff
+
+from sys import version
+py3 = version[0] == '3'
 
 
 class DeepDiffTestCase(unittest.TestCase):
@@ -247,6 +252,71 @@ class DeepDiffTestCase(unittest.TestCase):
         t1 = [{1: Decimal('10.1')}, {2: Decimal('10.2')}]
         t2 = [{2: Decimal('10.2')}, {1: Decimal('10.1')}]
         ddiff = DeepDiff(t1, t2, ignore_order=True)
+        result = {}
+        self.assertEqual(ddiff, result)
+
+    def test_unicode_string_type_changes(self):
+        unicodeString = {"hello": u"你好"}
+        asciiString = {"hello": "你好"}
+        ddiff = DeepDiff(unicodeString, asciiString)
+        if py3:
+            # In python3, all string is unicode, so diff is empty
+            result = {}
+        else:
+            # In python2, these are 2 different type of strings
+            result = {'type_changes': [u"root['hello']: \u4f60\u597d=<type 'unicode'> ===> \u4f60\u597d=<type 'str'>"]}
+        self.assertEqual(ddiff, result)
+
+    def test_unicode_string_value_changes(self):
+        unicodeString = {"hello": u"你好"}
+        asciiString = {"hello": u"你好hello"}
+        ddiff = DeepDiff(unicodeString, asciiString)
+        if py3:
+            result = {'values_changed': ["root['hello']: '你好' ===> '你好hello'"]}
+        else:
+            result = {'values_changed': [u"root['hello']: '\u4f60\u597d' ===> '\u4f60\u597dhello'"]}
+        self.assertEqual(ddiff, result)
+
+    def test_unicode_string_value_and_type_changes(self):
+        unicodeString = {"hello": u"你好"}
+        asciiString = {"hello": "你好hello"}
+        ddiff = DeepDiff(unicodeString, asciiString)
+        if py3:
+            # In python3, all string is unicode, so these 2 strings only diff in values
+            result = {'values_changed': ["root['hello']: '你好' ===> '你好hello'"]}
+        else:
+            # In python2, these are 2 different type of strings
+            result = {'type_changes': [u"root['hello']: \u4f60\u597d=<type 'unicode'> ===> \u4f60\u597dhello=<type 'str'>"]}
+        self.assertEqual(ddiff, result)
+
+    def test_int_to_unicode_string(self):
+        t1 = 1
+        asciiString = "你好"
+        ddiff = DeepDiff(t1, asciiString)
+        if py3:
+            # In python3, all string is unicode, so these 2 strings only diff in values
+            result = {'type_changes': ["root: 1=<type 'int'> ===> 你好=<type 'str'>"]}
+        else:
+            # In python2, these are 2 different type of strings
+            result = {'type_changes': [u"root: 1=<type 'int'> ===> \u4f60\u597d=<type 'str'>"]}
+        self.assertEqual(ddiff, result)
+
+    def test_int_to_unicode(self):
+        t1 = 1
+        unicodeString = u"你好"
+        ddiff = DeepDiff(t1, unicodeString)
+        if py3:
+            # In python3, all string is unicode, so these 2 strings only diff in values
+            result = {'type_changes': ["root: 1=<type 'int'> ===> 你好=<type 'str'>"]}
+        else:
+            # In python2, these are 2 different type of strings
+            result = {'type_changes': [u"root: 1=<type 'int'> ===> \u4f60\u597d=<type 'unicode'>"]}
+        self.assertEqual(ddiff, result)
+
+    def test_unicode_string_value_and_type_not_changes(self):
+        unicodeString = {"hello": u"你好"}
+        asciiString = {"hello": u"你好"}
+        ddiff = DeepDiff(unicodeString, asciiString)
         result = {}
         self.assertEqual(ddiff, result)
 
